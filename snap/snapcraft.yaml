@@ -1,0 +1,56 @@
+name: dmrconfig-carroarmato0 # you probably want to 'snapcraft register <name>'
+base: core18 # the base snap is the execution environment for this snap
+version: '1.1' # just for humans, typically '1.2+git' or '1.3.2'
+summary: DMRconfig utility for programming digital radios via USB programming cable. # 79 char long summary
+description: |
+  On Linux, a permission to access USB device is required. 
+  It's possible to run dmrconfig-carroarmato0 as root, like "sudo dmrconfig-carroarmato0", but it's safer to enable access for users. 
+  Create a file /etc/udev/rules.d/99-dmr.rules with the following contents:
+  ```
+    # TYT MD-UV380
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="df11", MODE="666"
+
+    # Baofeng RD-5R, TD-5R, DM-1801
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="15a2", ATTRS{idProduct}=="0073", MODE="666"
+
+    # Anytone AT-D868UV: ignore this device in Modem Manager
+    ATTRS{idVendor}=="28e9" ATTRS{idProduct}=="018a", ENV{ID_MM_DEVICE_IGNORE}="1"
+  ```
+  ```
+    sudo udevadm control --reload-rules
+
+  ```
+
+  Before use you need to allow the Snap access to certain plugs:
+    ```sudo snap connect dmrconfig-carroarmato0:raw-usb```
+    ```sudo snap connect dmrconfig-carroarmato0:log-observe```
+
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict # use 'strict' once you have the right plugs and slots
+
+architectures:
+  - build-on: amd64
+
+apps:
+  dmrconfig:
+    command: bin/dmrconfig
+    plugs:
+      - hardware-observe
+      - raw-usb
+      - home
+      - log-observe
+
+parts:
+  dmrconfig:
+    plugin: make
+    source: https://github.com/OpenRTX/dmrconfig.git
+    source-tag: "1.1"
+    build-packages:
+      - libusb-1.0-0-dev
+      - libudev-dev
+      - pkg-config
+    override-build: |
+      make
+      make install
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp dmrconfig $SNAPCRAFT_PART_INSTALL/bin
